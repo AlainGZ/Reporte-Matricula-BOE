@@ -1,0 +1,104 @@
+@startuml clases
+'==============================================================
+' Diagrama de clases — núcleo, etapas e interfaz
+'==============================================================
+title Diagrama de clases — Núcleo, etapas e interfaz
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam class {
+  BackgroundColor #EEEDFE
+  BorderColor #534AB7
+  FontColor #26215C
+}
+
+enum TipoResultado {
+  CONTINUAR
+  REVISION_USUARIO
+  ESPERAR_ARCHIVO
+  ERROR
+}
+
+class ResultadoEtapa {
+  +tipo: TipoResultado
+  +mensaje: str
+  +archivo_generado: Path
+  +archivo_requerido: ArchivoRequerido
+  +metricas: dict
+  --
+  +continuar(...) : ResultadoEtapa
+  +revision(...) : ResultadoEtapa
+  +esperar_archivo(...) : ResultadoEtapa
+  +error(...) : ResultadoEtapa
+}
+
+class ArchivoRequerido {
+  +nombre_sugerido: str
+  +instrucciones: str
+  +datos_para_consultar: list
+}
+
+class Contexto {
+  +carpeta_entrada: Path
+  +carpeta_salida: Path
+  +carpeta_historico: Path
+  +carpeta_temporal: Path
+  +fecha_reporte: str
+  +artefactos: dict
+  --
+  +registrar(clave, ruta)
+  +obtener(clave) : Path
+}
+
+abstract class Etapa {
+  +nombre: str
+  +descripcion: str
+  --
+  +{abstract} ejecutar(ctx) : ResultadoEtapa
+}
+
+class EtapaMatriculaBase {
+  +prefijo_archivo_entrada: str
+  --
+  +ejecutar(ctx) : ResultadoEtapa
+  -_localizar_entrada(ctx) : Path
+}
+
+class Orquestador {
+  -_etapas: list<Etapa>
+  -_contexto: Contexto
+  -_estado: EstadoProceso
+  --
+  +avanzar() : ResultadoEtapa
+  +confirmar_y_continuar()
+  +progreso : tuple
+  +terminado : bool
+}
+
+class VentanaPrincipal {
+  -_orquestador: Orquestador
+  -_tablas_visibles: dict
+  --
+  +_accion_principal()
+  +_montar_preview(ruta)
+  +_guardar_ediciones_revision()
+}
+
+class TablaEditable {
+  -_df: DataFrame
+  --
+  +dataframe : DataFrame
+  +filas_ocultas() : int
+}
+
+Etapa <|-- EtapaMatriculaBase
+ResultadoEtapa --> TipoResultado
+ResultadoEtapa --> ArchivoRequerido
+Etapa ..> ResultadoEtapa : produce
+Etapa ..> Contexto : usa
+Orquestador o--> Etapa : ejecuta en orden
+Orquestador --> Contexto
+VentanaPrincipal --> Orquestador
+VentanaPrincipal o--> TablaEditable
+
+@enduml

@@ -1,0 +1,4 @@
+# Dependencias de desarrollo (además de requirements.txt)
+-r requirements.txt
+pytest>=7.0.0
+pyinstaller>=6.0.0

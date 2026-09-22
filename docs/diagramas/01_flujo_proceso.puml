@@ -1,0 +1,66 @@
+@startuml flujo_proceso
+'==============================================================
+' Diagrama de flujo del proceso de matrícula base
+' Reemplazo de la macro VBA "Macro reporte detalle"
+'==============================================================
+title Flujo del proceso — Reporte de matrícula base
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam activity {
+  BackgroundColor #E6F1FB
+  BorderColor #185FA5
+  FontColor #042C53
+}
+skinparam note {
+  BackgroundColor #FAEEDA
+  BorderColor #854F0B
+}
+
+start
+
+:Descargar de SAP el archivo
+Matricula_Financiera-Detalle.xlsx;
+note right: Acción externa del usuario.\nEl programa solo lo consume.
+
+:Colocar el archivo en la carpeta /datos/entrada;
+
+partition "Etapa 1 — Procesamiento (automático)" {
+  :Cargar hoja "Detalle Estudiantes"
+  (encabezados en fila 2, descartar columna vacía);
+  :Preprocesamiento — borrar CCP Propio y
+  Desc_convenios; Valor Convenio = 0;
+  :Limpieza — fijar Rectoría y Sede,
+  borrar columnas demográficas y Banner,
+  quitar fila de totales;
+  :Convertir a número — Interlocutor, Centro Costo,
+  Snies, # Factura, # Pedido;
+  :Eliminar filas con Cant matrícula
+  o Ingreso bruto en cero;
+  :SUMIF — agrupar Ingreso bruto por # Factura;
+  :Calcular Ingreso neto
+  (suma de columnas financieras);
+  :Filtrar # Pedido que empieza en 6 o 7;
+  :Aplicar ajustes puntuales
+  (Beca, Tipo estudiante, filas a eliminar);
+  :Normalizar nombres de programa por año;
+  :Crear llave de 4 campos, ordenar Z→A,
+  quitar duplicados, ordenar Interlocutor;
+  :Segmentar en hojas por año;
+  :Guardar reporte_matricula_<fecha>.xlsx;
+}
+
+:Mostrar vista previa editable
+(una pestaña por año);
+
+if (¿El usuario aprueba los datos?) then (sí)
+  :Guardar ediciones al Excel;
+  :Reporte final disponible en /datos/salida;
+  stop
+else (no — corregir)
+  :El usuario edita celdas
+  en la vista previa;
+  note right: Vuelve a la vista previa\ncon los cambios aplicados.
+endif
+
+@enduml

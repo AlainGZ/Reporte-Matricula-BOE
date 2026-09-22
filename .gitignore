@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Empaquetado
+build/
+dist/
+*.spec
+
+# Datos de trabajo (no versionar archivos reales)
+datos/entrada/*
+datos/salida/*
+datos/historico/*
+datos/temporal/*
+!datos/**/.gitkeep
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

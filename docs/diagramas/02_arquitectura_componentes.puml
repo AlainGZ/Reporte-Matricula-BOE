@@ -1,0 +1,68 @@
+@startuml arquitectura_componentes
+'==============================================================
+' Diagrama de componentes — arquitectura por capas
+'==============================================================
+title Arquitectura de componentes — Automatización del reporte
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam componentStyle rectangle
+skinparam package {
+  BackgroundColor #F1EFE8
+  BorderColor #5F5E5A
+}
+skinparam component {
+  BackgroundColor #E1F5EE
+  BorderColor #0F6E56
+  FontColor #04342C
+}
+
+package "Interfaz (presentación)" as ui {
+  [main.py] as main
+  [VentanaPrincipal] as ventana
+  [TablaEditable] as tabla
+  [consola] as consola
+}
+
+package "Núcleo (infraestructura)" as core {
+  [Orquestador] as orq
+  [Etapa (contrato)] as etapa
+  [Contexto] as ctx
+  [ResultadoEtapa] as res
+  [excel_io] as io
+}
+
+package "Etapas (casos de uso)" as stages {
+  [EtapaMatriculaBase] as e1
+}
+
+package "Dominio (reglas de negocio)" as domain {
+  [matricula_base] as mb
+  [columnas] as cols
+}
+
+main --> ventana
+main --> consola
+ventana --> tabla
+ventana --> orq
+consola --> orq
+orq --> etapa
+orq --> ctx
+etapa <|-- e1
+e1 --> mb
+e1 --> io
+e1 ..> res : produce
+mb --> cols
+ventana ..> res : reacciona a
+
+note bottom of domain
+  Funciones puras, sin efectos secundarios.
+  No dependen de la interfaz ni del núcleo.
+end note
+
+note bottom of ui
+  Solo presenta y recoge decisiones.
+  No contiene lógica de negocio.
+end note
+
+@enduml

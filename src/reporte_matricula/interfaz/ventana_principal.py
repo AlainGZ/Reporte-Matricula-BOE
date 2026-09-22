@@ -1,0 +1,235 @@
+"""Ventana principal de la aplicación de escritorio.
+
+Conduce el mismo orquestador que usa la consola, pero traduce cada
+`ResultadoEtapa` a una pantalla gráfica: barra de progreso, mensajes, y —cuando
+una etapa pide revisión— una vista previa editable con una pestaña por hoja del
+Excel intermedio. El usuario corrige lo que necesite y, al aprobar, sus cambios
+se guardan de vuelta al archivo antes de continuar.
+
+No contiene lógica de negocio: solo presenta y recoge decisiones. Toda la lógica
+vive en `dominio/` y la coordinación en `nucleo/`.
+"""
+
+from __future__ import annotations
+from datetime import date
+from pathlib import Path
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+import pandas as pd
+
+from ..nucleo.etapa import Contexto
+from ..nucleo.orquestador import Orquestador
+from ..nucleo.resultado import ResultadoEtapa, TipoResultado
+from ..nucleo import excel_io
+from ..etapas.etapa1_matricula_base import EtapaMatriculaBase
+from .tabla_editable import TablaEditable
+
+
+class VentanaPrincipal(tk.Tk):
+    """Aplicación de escritorio para el reporte de matrícula."""
+
+    def __init__(self, carpeta_datos: Path, fecha_reporte: str | None = None) -> None:
+        super().__init__()
+        self.title("Reporte de Matrícula Financiera — Uniminuto")
+        self.geometry("1000x680")
+        self.minsize(800, 560)
+
+        self._carpeta_datos = carpeta_datos
+        self._fecha_reporte = fecha_reporte
+        self._orquestador: Orquestador | None = None
+        self._tablas_visibles: dict[str, TablaEditable] = {}
+        self._archivo_en_revision: Path | None = None
+
+        self._construir_cabecera()
+        self._construir_area_central()
+        self._construir_pie()
+        self._preparar_proceso()
+
+    # ---------- Construcción de la interfaz ----------
+
+    def _construir_cabecera(self) -> None:
+        cabecera = ttk.Frame(self, padding=(16, 12))
+        cabecera.pack(fill="x")
+
+        self._etiqueta_paso = ttk.Label(cabecera, text="", font=("Segoe UI", 11, "bold"))
+        self._etiqueta_paso.pack(anchor="w")
+
+        self._barra = ttk.Progressbar(cabecera, mode="determinate")
+        self._barra.pack(fill="x", pady=(8, 0))
+
+    def _construir_area_central(self) -> None:
+        self._centro = ttk.Frame(self, padding=(16, 8))
+        self._centro.pack(fill="both", expand=True)
+
+        self._mensaje = ttk.Label(self._centro, text="", wraplength=940, justify="left")
+        self._mensaje.pack(anchor="w", pady=(0, 8))
+
+        # Contenedor donde se montan las pestañas de vista previa cuando hay revisión.
+        self._contenedor_preview = ttk.Frame(self._centro)
+        self._contenedor_preview.pack(fill="both", expand=True)
+
+    def _construir_pie(self) -> None:
+        pie = ttk.Frame(self, padding=(16, 12))
+        pie.pack(fill="x")
+
+        self._boton_secundario = ttk.Button(pie, text="Cancelar", command=self._cancelar)
+        self._boton_secundario.pack(side="left")
+
+        self._boton_principal = ttk.Button(pie, text="Iniciar", command=self._accion_principal)
+        self._boton_principal.pack(side="right")
+
+    # ---------- Preparación del proceso ----------
+
+    def _preparar_proceso(self) -> None:
+        contexto = self._construir_contexto()
+        etapas = [
+            EtapaMatriculaBase(),
+            # Próximas etapas (rectoría, recibos, fortalecimiento) se agregan aquí.
+        ]
+        self._orquestador = Orquestador(etapas, contexto)
+        self._actualizar_progreso()
+        self._mensaje.config(
+            text=(
+                "Coloca el archivo descargado en la carpeta de entrada y presiona "
+                f"Iniciar.\n\nCarpeta de entrada: {contexto.carpeta_entrada}"
+            )
+        )
+
+    def _construir_contexto(self) -> Contexto:
+        fecha = self._fecha_reporte or date.today().strftime("%d.%m.%Y")
+        contexto = Contexto(
+            carpeta_entrada=self._carpeta_datos / "entrada",
+            carpeta_salida=self._carpeta_datos / "salida",
+            carpeta_historico=self._carpeta_datos / "historico",
+            carpeta_temporal=self._carpeta_datos / "temporal",
+            fecha_reporte=fecha,
+        )
+        for carpeta in (contexto.carpeta_entrada, contexto.carpeta_salida,
+                        contexto.carpeta_historico, contexto.carpeta_temporal):
+            carpeta.mkdir(parents=True, exist_ok=True)
+        return contexto
+
+    # ---------- Flujo por pasos ----------
+
+    def _accion_principal(self) -> None:
+        """El botón principal cambia de significado según el estado:
+        Iniciar / Aprobar y continuar / Ya lo tengo / Cerrar."""
+        if self._orquestador is None or self._orquestador.terminado:
+            self.destroy()
+            return
+
+        # Si hay una revisión pendiente, guardar las ediciones antes de continuar.
+        if self._archivo_en_revision is not None:
+            self._guardar_ediciones_revision()
+            self._archivo_en_revision = None
+            self._limpiar_preview()
+            self._orquestador.confirmar_y_continuar()
+
+        self._ejecutar_siguiente()
+
+    def _ejecutar_siguiente(self) -> None:
+        if self._orquestador is None:
+            return
+        if self._orquestador.terminado:
+            self._finalizar()
+            return
+
+        self._actualizar_progreso()
+        resultado = self._orquestador.avanzar()
+        self._procesar_resultado(resultado)
+
+    def _procesar_resultado(self, resultado: ResultadoEtapa) -> None:
+        self._mensaje.config(text=resultado.mensaje)
+
+        if resultado.tipo is TipoResultado.ERROR:
+            messagebox.showerror("Error en el proceso", f"{resultado.mensaje}\n\n{resultado.detalle_error}")
+            self._boton_principal.config(text="Cerrar")
+            return
+
+        if resultado.tipo is TipoResultado.CONTINUAR:
+            self._ejecutar_siguiente()
+            return
+
+        if resultado.tipo is TipoResultado.REVISION_USUARIO:
+            self._mostrar_revision(resultado)
+            return
+
+        if resultado.tipo is TipoResultado.ESPERAR_ARCHIVO:
+            self._mostrar_espera(resultado)
+            return
+
+    def _mostrar_revision(self, resultado: ResultadoEtapa) -> None:
+        self._archivo_en_revision = resultado.archivo_generado
+        self._montar_preview(resultado.archivo_generado)
+        self._boton_principal.config(text="Aprobar y continuar")
+
+    def _mostrar_espera(self, resultado: ResultadoEtapa) -> None:
+        requerido = resultado.archivo_requerido
+        detalle = f"{resultado.mensaje}\n\nArchivo a proporcionar: {requerido.nombre_sugerido}\n{requerido.instrucciones}"
+        self._mensaje.config(text=detalle)
+        self._boton_principal.config(text="Ya lo tengo, continuar")
+
+    # ---------- Vista previa editable ----------
+
+    def _montar_preview(self, ruta_excel: Path) -> None:
+        self._limpiar_preview()
+
+        cuaderno = ttk.Notebook(self._contenedor_preview)
+        cuaderno.pack(fill="both", expand=True)
+
+        hojas = excel_io.leer_hojas(ruta_excel)  # {hoja: df}
+        for nombre_hoja, df in hojas.items():
+            marco = ttk.Frame(cuaderno)
+            tabla = TablaEditable(marco, df)
+            tabla.pack(fill="both", expand=True)
+            if tabla.filas_ocultas() > 0:
+                ttk.Label(
+                    marco,
+                    text=(
+                        f"Mostrando las primeras {len(df) - tabla.filas_ocultas()} filas "
+                        f"de {len(df)}. Las ediciones sobre filas visibles se guardan."
+                    ),
+                    foreground="#8a6d00",
+                ).pack(anchor="w", pady=(4, 0))
+            cuaderno.add(marco, text=nombre_hoja)
+            self._tablas_visibles[nombre_hoja] = tabla
+
+    def _guardar_ediciones_revision(self) -> None:
+        if self._archivo_en_revision is None or not self._tablas_visibles:
+            return
+        hojas = {nombre: tabla.dataframe for nombre, tabla in self._tablas_visibles.items()}
+        excel_io.guardar_hojas(hojas, self._archivo_en_revision)
+
+    def _limpiar_preview(self) -> None:
+        for hijo in self._contenedor_preview.winfo_children():
+            hijo.destroy()
+        self._tablas_visibles.clear()
+
+    # ---------- Auxiliares ----------
+
+    def _actualizar_progreso(self) -> None:
+        if self._orquestador is None:
+            return
+        actual, total = self._orquestador.progreso
+        self._etiqueta_paso.config(text=f"Paso {actual} de {total}")
+        self._barra.config(maximum=total, value=actual - 1)
+
+    def _finalizar(self) -> None:
+        contexto = self._orquestador.contexto if self._orquestador else None
+        salida = contexto.carpeta_salida if contexto else ""
+        self._limpiar_preview()
+        self._mensaje.config(text=f"Proceso completado. Archivos finales en:\n{salida}")
+        self._etiqueta_paso.config(text="Completado")
+        self._barra.config(value=self._barra["maximum"])
+        self._boton_principal.config(text="Cerrar")
+        self._boton_secundario.config(state="disabled")
+
+    def _cancelar(self) -> None:
+        if messagebox.askyesno("Cancelar", "¿Seguro que quieres cancelar el proceso?"):
+            self.destroy()
+
+
+def iniciar_aplicacion(carpeta_datos: Path, fecha_reporte: str | None = None) -> None:
+    app = VentanaPrincipal(carpeta_datos, fecha_reporte)
+    app.mainloop()

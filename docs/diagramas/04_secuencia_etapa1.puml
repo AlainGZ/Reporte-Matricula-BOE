@@ -1,0 +1,50 @@
+@startuml secuencia_etapa1
+'==============================================================
+' Diagrama de secuencia — ejecución de la Etapa 1 con revisión
+'==============================================================
+title Secuencia — Procesamiento y revisión de la matrícula base
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam sequence {
+  ArrowColor #185FA5
+  LifeLineBorderColor #0F6E56
+  ParticipantBackgroundColor #E1F5EE
+  ParticipantBorderColor #0F6E56
+  ActorBackgroundColor #FAEEDA
+}
+
+actor Usuario
+participant "VentanaPrincipal" as UI
+participant "Orquestador" as ORQ
+participant "EtapaMatriculaBase" as E1
+participant "matricula_base\n(dominio)" as DOM
+participant "excel_io" as IO
+
+Usuario -> UI : Presiona "Iniciar"
+UI -> ORQ : avanzar()
+ORQ -> E1 : ejecutar(contexto)
+E1 -> E1 : _localizar_entrada()
+E1 -> DOM : procesar_matricula_base(ruta)
+DOM -> DOM : limpiar, calcular, deduplicar,\nsegmentar por año
+DOM --> E1 : {año: DataFrame}
+E1 -> IO : guardar_hojas(hojas, ruta_salida)
+IO --> E1 : ruta_salida
+E1 --> ORQ : ResultadoEtapa(REVISION_USUARIO)
+ORQ --> UI : resultado
+UI -> IO : leer_hojas(ruta_salida)
+IO --> UI : {año: DataFrame}
+UI -> UI : montar vista previa editable
+UI --> Usuario : muestra pestañas por año
+
+alt Usuario corrige datos
+  Usuario -> UI : edita celdas (doble clic)
+end
+
+Usuario -> UI : Presiona "Aprobar y continuar"
+UI -> IO : guardar_hojas(ediciones)
+UI -> ORQ : confirmar_y_continuar()
+ORQ --> UI : (proceso terminado)
+UI --> Usuario : "Proceso completado"
+
+@enduml

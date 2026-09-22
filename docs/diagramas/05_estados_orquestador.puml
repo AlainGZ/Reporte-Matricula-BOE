@@ -1,0 +1,42 @@
+@startuml estados_orquestador
+'==============================================================
+' Diagrama de estados — ciclo del orquestador por etapa
+'==============================================================
+title Máquina de estados — Orquestador del proceso
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam state {
+  BackgroundColor #E1F5EE
+  BorderColor #0F6E56
+  FontColor #04342C
+}
+
+[*] --> Inactivo
+
+Inactivo --> Ejecutando : avanzar()
+
+state Ejecutando {
+  [*] --> CorriendoEtapa
+  CorriendoEtapa --> Evaluando : etapa.ejecutar() devuelve resultado
+}
+
+Evaluando --> Ejecutando : CONTINUAR\n(avanza índice)
+Evaluando --> EsperandoRevision : REVISION_USUARIO
+Evaluando --> EsperandoArchivo : ESPERAR_ARCHIVO
+Evaluando --> Detenido : ERROR
+
+EsperandoRevision --> Ejecutando : confirmar_y_continuar()\n(usuario aprueba)
+EsperandoArchivo --> Ejecutando : confirmar_y_continuar()\n(usuario entrega archivo)
+
+Ejecutando --> Completado : no quedan etapas
+Completado --> [*]
+Detenido --> [*]
+
+note right of EsperandoRevision
+  El humano controla el ritmo:
+  el orquestador no avanza solo
+  cuando hay una pausa.
+end note
+
+@enduml
