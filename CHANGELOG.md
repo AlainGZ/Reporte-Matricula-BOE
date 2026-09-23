@@ -27,6 +27,12 @@ Primera versión funcional: reemplazo completo de la macro VBA de matrícula bas
 
 ## [No liberado]
 
+### Cambiado
+- La ventana gráfica y la consola ahora abren un cuadro de selección de
+  archivo (`filedialog`) para elegir el Excel de matrícula desde cualquier
+  carpeta, en vez de exigir que se copie primero a `datos/entrada`. La
+  búsqueda automática por carpeta se mantiene como respaldo.
+
 ### Pendiente
 - Etapas de conciliación de rectoría, recibos y fortalecimiento regional.
 - Empaquetado y autorización del `.exe` para equipos de la organización.

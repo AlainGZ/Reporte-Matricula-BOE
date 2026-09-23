@@ -72,8 +72,17 @@ class EtapaMatriculaBase(Etapa):
         )
 
     def _localizar_entrada(self, contexto: Contexto) -> Path | None:
-        """Busca en la carpeta de entrada el primer Excel cuyo nombre empiece por
-        el prefijo esperado. Tolera el sufijo de fecha y la extensión."""
+        """Devuelve el archivo a procesar.
+
+        Prioridad:
+        1. `contexto.archivo_seleccionado`: la ruta que el usuario eligió con el
+           cuadro de selección de archivo (puede estar en cualquier carpeta).
+        2. Búsqueda automática en `carpeta_entrada` por prefijo de nombre, que se
+           mantiene como respaldo para la interfaz de consola o uso sin diálogo.
+        """
+        if contexto.archivo_seleccionado is not None and contexto.archivo_seleccionado.exists():
+            return contexto.archivo_seleccionado
+
         if not contexto.carpeta_entrada.exists():
             return None
         for patron in (f"{self.prefijo_archivo_entrada}*.xlsx", f"{self.prefijo_archivo_entrada}*.xls"):

@@ -17,24 +17,23 @@ necesitas hacer nada de eso.
 
 ## Paso a paso
 
-### 1. Coloca el archivo de entrada
-
-Descarga el archivo `Matricula_Financiera-Detalle...xlsx` como lo haces
-normalmente y guárdalo en la carpeta **`datos/entrada`** del programa.
-
-> No importa si el nombre trae una fecha al final (por ejemplo
-> `Matricula_Financiera-Detalle_03.03.2026.xlsx`): el programa lo reconoce igual.
-
-### 2. Abre el programa
+### 1. Abre el programa
 
 Haz doble clic en **`scripts/ejecutar.bat`** (o pídele al área técnica que te deje
 un acceso directo). Se abrirá una ventana con el título *"Reporte de Matrícula
 Financiera — Uniminuto"*.
 
-### 3. Presiona "Iniciar"
+### 2. Selecciona el archivo
 
-El programa procesa el archivo. En unos segundos verás una **vista previa** con
-varias pestañas, una por cada año (2025, 2026, ...).
+Presiona **"Seleccionar archivo"**. Se abre el cuadro de búsqueda de archivos de
+Windows: navega hasta donde tengas guardado el `Matricula_Financiera-Detalle...xlsx`
+(Descargas, OneDrive, el escritorio, donde sea) y ábrelo. No es necesario copiarlo
+a ninguna carpeta especial del programa.
+
+### 3. El programa procesa el archivo automáticamente
+
+Al elegir el archivo, el procesamiento empieza de inmediato. En unos segundos
+verás una **vista previa** con varias pestañas, una por cada año (2025, 2026, ...).
 
 ### 4. Revisa y corrige si hace falta
 
@@ -55,9 +54,9 @@ guardan y el reporte final queda en la carpeta **`datos/salida`** con el nombre
 ## Preguntas frecuentes
 
 **No aparece la vista previa y sale un error rojo.**
-El programa no encontró el archivo o le falta una columna. Verifica que el
-archivo esté en `datos/entrada` y que sea el correcto. El mensaje de error indica
-qué pasó.
+El archivo que elegiste no tiene la estructura esperada (le falta una columna) o
+no es el correcto. El mensaje de error indica qué pasó; cierra el programa,
+verifica el archivo y vuelve a intentarlo.
 
 **Me equivoqué en una corrección.**
 Vuelve a hacer doble clic en la celda y escribe el valor correcto antes de

@@ -50,11 +50,11 @@ sistema), así que **no dispara la restricción de ejecutables no verificados**.
 
 ## 5. Estructura de carpetas de datos
 
-El programa crea y usa estas subcarpetas dentro de `datos/`:
+El programa crea estas subcarpetas dentro de `datos/`:
 
 | Carpeta | Para qué |
 |---------|----------|
-| `entrada` | Aquí se coloca el archivo descargado. |
+| `entrada` | Ya no es obligatoria para el uso diario: el archivo se elige con el cuadro de selección de Windows, esté donde esté. Se mantiene por compatibilidad (uso desde consola sin diálogo). |
 | `salida` | Aquí queda el reporte generado. |
 | `historico` | Reservada para etapas futuras. |
 | `temporal` | Archivos intermedios de trabajo. |

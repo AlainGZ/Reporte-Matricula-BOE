@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 
 import pandas as pd
 
@@ -40,6 +40,7 @@ class VentanaPrincipal(tk.Tk):
         self._orquestador: Orquestador | None = None
         self._tablas_visibles: dict[str, TablaEditable] = {}
         self._archivo_en_revision: Path | None = None
+        self._proceso_iniciado: bool = False
 
         self._construir_cabecera()
         self._construir_area_central()
@@ -88,13 +89,15 @@ class VentanaPrincipal(tk.Tk):
             # Próximas etapas (rectoría, recibos, fortalecimiento) se agregan aquí.
         ]
         self._orquestador = Orquestador(etapas, contexto)
+        self._proceso_iniciado = False
         self._actualizar_progreso()
         self._mensaje.config(
             text=(
-                "Coloca el archivo descargado en la carpeta de entrada y presiona "
-                f"Iniciar.\n\nCarpeta de entrada: {contexto.carpeta_entrada}"
+                "Presiona \"Seleccionar archivo\" y elige el Excel de matrícula "
+                "descargado, esté donde esté guardado en tu computador."
             )
         )
+        self._boton_principal.config(text="Seleccionar archivo")
 
     def _construir_contexto(self) -> Contexto:
         fecha = self._fecha_reporte or date.today().strftime("%d.%m.%Y")
@@ -114,9 +117,13 @@ class VentanaPrincipal(tk.Tk):
 
     def _accion_principal(self) -> None:
         """El botón principal cambia de significado según el estado:
-        Iniciar / Aprobar y continuar / Ya lo tengo / Cerrar."""
+        Seleccionar archivo / Aprobar y continuar / Ya lo tengo / Cerrar."""
         if self._orquestador is None or self._orquestador.terminado:
             self.destroy()
+            return
+
+        if not self._proceso_iniciado:
+            self._seleccionar_archivo_y_comenzar()
             return
 
         # Si hay una revisión pendiente, guardar las ediciones antes de continuar.
@@ -126,6 +133,27 @@ class VentanaPrincipal(tk.Tk):
             self._limpiar_preview()
             self._orquestador.confirmar_y_continuar()
 
+        self._ejecutar_siguiente()
+
+    def _seleccionar_archivo_y_comenzar(self) -> None:
+        """Abre el cuadro de búsqueda del explorador de archivos, y con el
+        archivo elegido arranca el proceso de inmediato, sin importar en qué
+        carpeta esté guardado."""
+        ruta = filedialog.askopenfilename(
+            parent=self,
+            title="Selecciona el archivo de matrícula financiera",
+            filetypes=[("Excel", "*.xlsx *.xls"), ("Todos los archivos", "*.*")],
+        )
+        if not ruta:
+            return  # El usuario canceló el diálogo; se queda en la pantalla inicial.
+
+        assert self._orquestador is not None
+        self._orquestador.contexto.archivo_seleccionado = Path(ruta)
+        self._proceso_iniciado = True
+        self._mensaje.config(text=f"Archivo seleccionado:\n{ruta}\n\nProcesando...")
+        self._boton_principal.config(state="disabled")
+        self.update_idletasks()
+        self._boton_principal.config(state="normal")
         self._ejecutar_siguiente()
 
     def _ejecutar_siguiente(self) -> None:

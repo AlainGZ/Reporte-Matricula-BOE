@@ -58,6 +58,18 @@ def _pausar_para_archivo(resultado: ResultadoEtapa) -> None:
     input("    Cuando el archivo esté en la carpeta de entrada, presiona Enter para continuar...")
 
 
+def _pedir_ruta_archivo() -> Path:
+    """Pide al usuario la ruta del Excel de matrícula, esté donde esté."""
+    while True:
+        ruta_texto = input(
+            "\nRuta completa del archivo de matrícula (o arrástralo a esta ventana): "
+        ).strip().strip('"')
+        ruta = Path(ruta_texto)
+        if ruta.is_file():
+            return ruta
+        print(f"    No se encontró un archivo en: {ruta}. Intenta de nuevo.")
+
+
 def ejecutar_proceso(carpeta_datos: Path, fecha_reporte: str | None = None) -> None:
     """Bucle principal: ejecuta cada etapa y gestiona sus pausas."""
     print(_linea())
@@ -65,6 +77,7 @@ def ejecutar_proceso(carpeta_datos: Path, fecha_reporte: str | None = None) -> N
     print(_linea())
 
     contexto = construir_contexto(carpeta_datos, fecha_reporte)
+    contexto.archivo_seleccionado = _pedir_ruta_archivo()
     etapas = [EtapaMatriculaBase()]
     orquestador = Orquestador(etapas, contexto)
 

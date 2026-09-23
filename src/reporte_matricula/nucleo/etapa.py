@@ -29,6 +29,10 @@ class Contexto:
     carpeta_temporal: Path
     fecha_reporte: str  # formato dd.mm.aaaa; sufijo de los archivos del día.
     artefactos: dict[str, Path] = field(default_factory=dict)
+    #: Ruta elegida explícitamente por el usuario (por ejemplo, con un cuadro de
+    #: selección de archivo). Si está presente, tiene prioridad sobre cualquier
+    #: búsqueda automática en `carpeta_entrada`.
+    archivo_seleccionado: Path | None = None
 
     def registrar(self, clave: str, ruta: Path) -> None:
         """Guarda la ruta de un archivo producido, identificado por una clave estable."""
