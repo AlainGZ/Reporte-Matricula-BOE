@@ -32,6 +32,13 @@ Primera versión funcional: reemplazo completo de la macro VBA de matrícula bas
   archivo (`filedialog`) para elegir el Excel de matrícula desde cualquier
   carpeta, en vez de exigir que se copie primero a `datos/entrada`. La
   búsqueda automática por carpeta se mantiene como respaldo.
+- Etapa 1 ya no pausa para revisión: procesa y exporta directo a
+  `datos/salida` en un solo paso (primera versión sin vista previa editable;
+  la infraestructura para volver a activarla ya existe en `nucleo/` y
+  `interfaz/tabla_editable.py`).
+- Interfaz rediseñada con un tema visual institucional centralizado
+  (`interfaz/tema.py`: cabecera azul marino, acento dorado) y espacio para el
+  logo oficial en `assets/logo_uniminuto.png` (opcional).
 
 ### Pendiente
 - Etapas de conciliación de rectoría, recibos y fortalecimiento regional.

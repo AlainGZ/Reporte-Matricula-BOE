@@ -23,7 +23,30 @@ from ..nucleo.orquestador import Orquestador
 from ..nucleo.resultado import ResultadoEtapa, TipoResultado
 from ..nucleo import excel_io
 from ..etapas.etapa1_matricula_base import EtapaMatriculaBase
+from . import tema
 from .tabla_editable import TablaEditable
+
+#: Ruta del logo institucional. Es opcional: si el archivo no existe, la
+#: cabecera simplemente se muestra sin logo. Coloca aquí el PNG oficial
+#: (fondo transparente, alto recomendado ~120px) para que aparezca.
+RUTA_LOGO = Path(__file__).resolve().parents[3] / "assets" / "logo_uniminuto.png"
+
+
+def _cargar_logo() -> tk.PhotoImage | None:
+    """Carga el logo institucional si está disponible, reducido a un alto
+    razonable para la cabecera. Nunca lanza: si falta el archivo o Tk no
+    puede leerlo, la interfaz sigue funcionando sin logo."""
+    if not RUTA_LOGO.exists():
+        return None
+    try:
+        imagen = tk.PhotoImage(file=str(RUTA_LOGO))
+    except tk.TclError:
+        return None
+    alto_objetivo = 56
+    if imagen.height() > alto_objetivo:
+        factor = max(1, imagen.height() // alto_objetivo)
+        imagen = imagen.subsample(factor, factor)
+    return imagen
 
 
 class VentanaPrincipal(tk.Tk):
@@ -31,9 +54,15 @@ class VentanaPrincipal(tk.Tk):
 
     def __init__(self, carpeta_datos: Path, fecha_reporte: str | None = None) -> None:
         super().__init__()
-        self.title("Reporte de Matrícula Financiera — Uniminuto")
-        self.geometry("1000x680")
-        self.minsize(800, 560)
+        tema.aplicar_tema(self)
+
+        self.title("Reporte de Matrícula Financiera — UNIMINUTO")
+        self.geometry("1040x620")
+        self.minsize(860, 520)
+
+        self._logo_imagen = _cargar_logo()
+        if self._logo_imagen is not None:
+            self.iconphoto(True, self._logo_imagen)
 
         self._carpeta_datos = carpeta_datos
         self._fecha_reporte = fecha_reporte
@@ -41,6 +70,7 @@ class VentanaPrincipal(tk.Tk):
         self._tablas_visibles: dict[str, TablaEditable] = {}
         self._archivo_en_revision: Path | None = None
         self._proceso_iniciado: bool = False
+        self._ultimo_resultado: ResultadoEtapa | None = None
 
         self._construir_cabecera()
         self._construir_area_central()
@@ -50,34 +80,60 @@ class VentanaPrincipal(tk.Tk):
     # ---------- Construcción de la interfaz ----------
 
     def _construir_cabecera(self) -> None:
-        cabecera = ttk.Frame(self, padding=(16, 12))
+        cabecera = ttk.Frame(self, style="Cabecera.TFrame", padding=(24, 18))
         cabecera.pack(fill="x")
 
-        self._etiqueta_paso = ttk.Label(cabecera, text="", font=("Segoe UI", 11, "bold"))
-        self._etiqueta_paso.pack(anchor="w")
+        fila_superior = ttk.Frame(cabecera, style="Cabecera.TFrame")
+        fila_superior.pack(fill="x")
 
-        self._barra = ttk.Progressbar(cabecera, mode="determinate")
+        if self._logo_imagen is not None:
+            ttk.Label(fila_superior, image=self._logo_imagen, style="LogoCabecera.TLabel").pack(
+                side="left", padx=(0, 16)
+            )
+
+        textos = ttk.Frame(fila_superior, style="Cabecera.TFrame")
+        textos.pack(side="left", fill="x", expand=True)
+        ttk.Label(
+            textos, text="Reporte de Matrícula Financiera", style="TituloCabecera.TLabel"
+        ).pack(anchor="w")
+        ttk.Label(
+            textos, text="Coordinación Financiera — UNIMINUTO", style="SubtituloCabecera.TLabel"
+        ).pack(anchor="w")
+
+        self._etiqueta_paso = ttk.Label(cabecera, text="", style="PasoCabecera.TLabel")
+        self._etiqueta_paso.pack(anchor="w", pady=(14, 0))
+
+        self._barra = ttk.Progressbar(
+            cabecera, mode="determinate", style="Institucional.Horizontal.TProgressbar"
+        )
         self._barra.pack(fill="x", pady=(8, 0))
 
     def _construir_area_central(self) -> None:
-        self._centro = ttk.Frame(self, padding=(16, 8))
+        self._centro = ttk.Frame(self, style="Central.TFrame", padding=(24, 20))
         self._centro.pack(fill="both", expand=True)
 
-        self._mensaje = ttk.Label(self._centro, text="", wraplength=940, justify="left")
+        self._mensaje = ttk.Label(
+            self._centro, text="", style="Mensaje.TLabel", wraplength=980, justify="left"
+        )
         self._mensaje.pack(anchor="w", pady=(0, 8))
 
-        # Contenedor donde se montan las pestañas de vista previa cuando hay revisión.
-        self._contenedor_preview = ttk.Frame(self._centro)
+        # Contenedor donde se montan las pestañas de vista previa, si alguna
+        # etapa futura vuelve a pedir revisión antes de continuar.
+        self._contenedor_preview = ttk.Frame(self._centro, style="Central.TFrame")
         self._contenedor_preview.pack(fill="both", expand=True)
 
     def _construir_pie(self) -> None:
-        pie = ttk.Frame(self, padding=(16, 12))
+        pie = ttk.Frame(self, style="Pie.TFrame", padding=(24, 18))
         pie.pack(fill="x")
 
-        self._boton_secundario = ttk.Button(pie, text="Cancelar", command=self._cancelar)
+        self._boton_secundario = ttk.Button(
+            pie, text="Cancelar", style="Secundario.TButton", command=self._cancelar
+        )
         self._boton_secundario.pack(side="left")
 
-        self._boton_principal = ttk.Button(pie, text="Iniciar", command=self._accion_principal)
+        self._boton_principal = ttk.Button(
+            pie, text="Seleccionar archivo", style="Principal.TButton", command=self._accion_principal
+        )
         self._boton_principal.pack(side="right")
 
     # ---------- Preparación del proceso ----------
@@ -168,9 +224,11 @@ class VentanaPrincipal(tk.Tk):
         self._procesar_resultado(resultado)
 
     def _procesar_resultado(self, resultado: ResultadoEtapa) -> None:
-        self._mensaje.config(text=resultado.mensaje)
+        self._mensaje.config(text=resultado.mensaje, style="Mensaje.TLabel")
+        self._ultimo_resultado = resultado
 
         if resultado.tipo is TipoResultado.ERROR:
+            self._mensaje.config(style="MensajeError.TLabel")
             messagebox.showerror("Error en el proceso", f"{resultado.mensaje}\n\n{resultado.detalle_error}")
             self._boton_principal.config(text="Cerrar")
             return
@@ -247,7 +305,12 @@ class VentanaPrincipal(tk.Tk):
         contexto = self._orquestador.contexto if self._orquestador else None
         salida = contexto.carpeta_salida if contexto else ""
         self._limpiar_preview()
-        self._mensaje.config(text=f"Proceso completado. Archivos finales en:\n{salida}")
+
+        detalle = self._ultimo_resultado.mensaje if self._ultimo_resultado else ""
+        self._mensaje.config(
+            text=f"{detalle}\n\nArchivo exportado en:\n{salida}",
+            style="MensajeExito.TLabel",
+        )
         self._etiqueta_paso.config(text="Completado")
         self._barra.config(value=self._barra["maximum"])
         self._boton_principal.config(text="Cerrar")

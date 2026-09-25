@@ -5,9 +5,8 @@ conocimientos técnicos.
 
 ## Qué hace el programa
 
-Toma el archivo de matrícula que descargas y genera, en segundos, el mismo
-reporte que antes hacía la macro (organizado por año), dándote la oportunidad de
-revisarlo y corregirlo antes de guardarlo.
+Toma el archivo de matrícula que descargas y genera el mismo reporte que antes
+hacía la macro (organizado por año), listo en la carpeta de salida.
 
 ## Antes de empezar (una sola vez)
 
@@ -30,37 +29,32 @@ Windows: navega hasta donde tengas guardado el `Matricula_Financiera-Detalle...x
 (Descargas, OneDrive, el escritorio, donde sea) y ábrelo. No es necesario copiarlo
 a ninguna carpeta especial del programa.
 
-### 3. El programa procesa el archivo automáticamente
+### 3. El programa procesa y exporta el archivo automáticamente
 
-Al elegir el archivo, el procesamiento empieza de inmediato. En unos segundos
-verás una **vista previa** con varias pestañas, una por cada año (2025, 2026, ...).
+Al elegir el archivo, el procesamiento empieza de inmediato: no hay que
+presionar nada más. El reporte final queda guardado en la carpeta
+**`datos/salida`** con el nombre `reporte_matricula_<fecha>.xlsx`, organizado
+por año (2025, 2026, ...).
 
-### 4. Revisa y corrige si hace falta
+> Con el archivo completo de matrícula (unas 60.000 filas), el procesamiento y
+> la exportación tardan alrededor de un minuto. Durante ese tiempo la ventana
+> puede verse "sin responder": es normal, solo espera a que termine.
 
-- Recorre las pestañas y revisa que los datos estén bien.
-- Si necesitas cambiar un dato, **haz doble clic sobre la celda**, escribe el
-  valor correcto y presiona **Enter**.
-- Puedes corregir tantas celdas como quieras.
-
-> La vista previa muestra las primeras 500 filas de cada año. Si necesitas
-> revisar más allá de eso, avísale al área técnica.
-
-### 5. Aprueba y termina
-
-Cuando todo esté bien, presiona **"Aprobar y continuar"**. Tus correcciones se
-guardan y el reporte final queda en la carpeta **`datos/salida`** con el nombre
-`reporte_matricula_<fecha>.xlsx`.
+Esta primera versión no muestra una vista previa editable antes de exportar
+—va directo de elegir el archivo a entregarlo en Excel—. Si más adelante se
+necesita volver a revisar y corregir antes de guardar, la arquitectura ya lo
+soporta (ver `docs/manual_tecnico.md`).
 
 ## Preguntas frecuentes
 
-**No aparece la vista previa y sale un error rojo.**
+**Sale un mensaje en rojo y no exportó nada.**
 El archivo que elegiste no tiene la estructura esperada (le falta una columna) o
 no es el correcto. El mensaje de error indica qué pasó; cierra el programa,
 verifica el archivo y vuelve a intentarlo.
 
-**Me equivoqué en una corrección.**
-Vuelve a hacer doble clic en la celda y escribe el valor correcto antes de
-aprobar. Nada se guarda hasta que presiones "Aprobar y continuar".
+**Me equivoqué de archivo o quiero volver a procesar.**
+Cierra la ventana (botón "Cerrar" al terminar, o "Cancelar" antes) y vuelve a
+abrir el programa; te pedirá seleccionar el archivo de nuevo.
 
 **¿Puedo cambiar la fecha del reporte?**
 Sí, pero eso se hace desde la línea de comandos (`--fecha`). Pídele al área

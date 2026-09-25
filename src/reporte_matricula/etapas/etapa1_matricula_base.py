@@ -61,10 +61,14 @@ class EtapaMatriculaBase(Etapa):
         contexto.registrar(ARTEFACTO_MATRICULA_BASE, ruta_salida)
 
         total = excel_io.contar_filas(hojas)
-        return ResultadoEtapa.revision(
+        # Primera versión: sin pausa de revisión. Procesa y exporta directo.
+        # Si en el futuro se necesita volver a pedir revisión antes de exportar,
+        # basta cambiar `continuar` por `revision` aquí; el resto de la ventana
+        # ya sabe reaccionar a ambos casos.
+        return ResultadoEtapa.continuar(
             mensaje=(
-                f"Matrícula base procesada: {total} registros en {len(hojas)} hojas "
-                f"por año. Revisa el archivo antes de continuar."
+                f"Matrícula procesada y exportada: {total} registros en {len(hojas)} "
+                f"hojas por año."
             ),
             archivo=ruta_salida,
             total_registros=total,
